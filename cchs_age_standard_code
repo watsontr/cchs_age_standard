@@ -251,7 +251,7 @@ Step 4. Sum adjusted row proportions by each level of the CCHS variable using Pr
 
 proc sql;
 	create table AgeStProp_&var.  as
-	select &var., sum (b.wt_prop) as AgeStProp    *Age adjusted proportion; 
+	select &var., sum (b.wt_prop) as AgeStProp    
 	from out_B as b
 	group by &var.;
 quit;
