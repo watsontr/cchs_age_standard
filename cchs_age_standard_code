@@ -48,7 +48,7 @@ Note: "Age-specific rates based on small numbers will exhibit a large amount of 
 
 	Access this macro in your program via:
 
-	%include '/sasroot/users/twatson/h/macros/CCHS_AGE_ADJ.sas';
+	%include '/sasroot/users/twatson/h/macros/cchs_age_standard.sas';
 
 	Copying should be avoided so that the program is maintained and 
 	kept up-to-date	in one place on RAE (see updates listed at end 
