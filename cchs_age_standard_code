@@ -1,0 +1,328 @@
+/*------------------------------------------------------------------------------------------------------------------------------------
+Disclaimer:
+Notice to any user of this code.
+The author makes no warranty, expressed or implied, as to the results obtained from the use of the information on the website. The author shall have no liability for the accuracy of the information and cannot be held liable for any third-party claims or losses of any damages. The user shall have the right to view the information and usage for the purpose for which it is intended and disclosed.
+-------------------------------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************
+   MACRO:       CCHS_AGE_STANDARD
+ 
+   PURPOSE:
+    
+1)	Create standard population.  The proportion of the population in each level of the age strata of the reference population will be used as age adjustment weights to direct standardize CCHS proportion estimates.
+2)	Compute CCHS crude Proportion estimates with logit confidence intervals for each CCHS variables of interest
+3)	Use direct standardization method to compute CCHS age-standardized proportion estimates using standard population with logit confidence intervals for each CCHS variables of interest
+4)	Produce Output Table 
+
+
+   MANDATORY PARAMETERS:
+		Data, var, canpopyr, survey_wt, agegrp, bsvarprefix, numbs, out
+		
+
+
+   CREATED:    Oct 5, 2018
+
+   UPDATED:    May 17, 2019
+
+   PROGRAMMER / CONTACT:    Tristan Watson 
+                               
+
+   UPDATES:     
+              
+
+
+   NOTES:       
+
+	You will need to categorize your "agegrp" variable in the same way as the agegrp format or update the format categories in the macro to reflect how you categorized your age variables
+
+Note: "Age-specific rates based on small numbers will exhibit a large amount of random variation and the data should be aggregated. Hence, different age groupings and corresponding calculations of age-adjustment weights may be needed for different applications."  [Ref 1]
+
+***************************************************************************;
+*ICES DATA APPROVALS:
+
+	 The analyst must have approval for the following datasets:
+			CCHS, POP
+		
+* ICES MACRO ACCESS:
+
+	Access this macro in your program via:
+
+	%include '/sasroot/users/twatson/h/macros/CCHS_AGE_ADJ.sas';
+
+	Copying should be avoided so that the program is maintained and 
+	kept up-to-date	in one place on RAE (see updates listed at end 
+	of this header).
+
+
+* REFERENCES:
+(1) Zhiwei Zeng. Adding the Feature of Age Adjustment for Survey-related Procedure in SAS-- Age Adjusting Prevalence Estimate from Population Based Surveys
+
+(2) Christian Gagne, Georgia Roberts, Leslie-Anne Keown. Weighted estimation and bootstrap variance estimation for analyzing
+survey data: How to implement in selected software.
+
+(3) https://support.sas.com/documentation/cdl/en/staug/63347/HTML/default/viewer.htm#surveyfreq_toc.htm
+	(Accessed Oct 1, 2018)	
+
+For information about combining multiple CCHS survey cycles and how to scale the survey and bootstrap weights:
+
+(4) Steven Thomas and Brenda Wannell. Combining cycles of the Canadian Health Survey. (2009)
+
+
+For information about CVs and appropriate observation counts with CCHS data, refer to CCHS User Guide.
+
+
+************************************* INSTRUCTIONS **************************************
+
+--- You MUST specify ---
+
+
+data 
+    - Input dataset name
+var 
+    - Variable of Interest
+
+canpopyr
+    - Year of Canadian population to use
+
+survey_wt
+    - Weight variable of the survey
+
+agegrp 
+     - Name of agegrp variable in the input dataset
+
+bsvarprefix
+     - The prefix of the bootstrapping variables (e.g. bsw for the CCHS
+       500 bootstrapping variables)
+       
+numbs
+     - Number of bootstrapping weights  (e.g. 500 for the CCHS 500
+       bootstrapping variables)
+  
+out
+     - Output dataset name 
+
+
+*********************** EXAMPLES ***********************************
+   
+
+%cchs_age_standard(
+data=work.M_tbd_greenstone, 
+var=cchs_smoking_grp_2, 
+canpopyr=2011, 
+survey_wt=normal_wt, 
+agegrp=cchs_age_grp, 
+bsvarprefix =normal_bsw, 
+numbs= 500,
+out=out3 );
+
+
+******************************************************************/ ;
+
+
+%macro cchs_age_standard (
+                        data = ,
+		                     var = ,	 
+	                  canpopyr = ,
+                   survey_wt = ,
+                      agegrp = ,
+ 		             bsvarprefix = ,
+                       numbs = ,
+                         out = );
+                   
+
+
+/* -----------------------------------------------
+Step 1. Select standard reference population and age group categories 
+
+        The proportion of the population in each level of the age strata of the reference population will 
+      be used as age adjustment weights to direct standardize CCHS proportion estimates.
+        
+        *------ Note: This part will only work if you are using macro on ICES RAE environment 
+        
+        
+          You will need to have you standard reference population (called: standard_pop_wt) in a similar format:
+        
+              Age Group |   % of Population
+              ------------------------------
+              18-34     |  29.13
+              35-49     |  26.34
+              50-64     |  25.97
+               ...      |   ...
+        
+        ---------;
+        
+       
+        
+        
+-------------------------------------------------*/
+
+/*   * Uncomment this this section if you are using this code on ICES RAE environment;
+
+
+
+*Create the standard Canadian population;
+
+
+	*Create formats - Age Group Categories;
+
+	proc format;
+
+	   value agegrp
+	               18-34 = '18-34'
+	               35-49 = '35-49'
+	               50-64 = '50-64'
+	               65-74 = '65-74'
+	             75-high = '75+';
+	run;
+
+
+	*Get reference population (Canada census population 2000) for standardization and restrict to age 18+ and create age categories;
+
+	proc freq data= popcan.popcan&canpopyr.; 
+    tables age; 
+   run;
+
+	*Keep if age 18+. Create age groups;
+  
+	data refpop&canpopyr. (drop = age rename = (newage = age));
+   		set popcan.popcan&canpopyr.;
+   		if 18 <= age or age = '90+'; *cannot determine age above 90, only reports 90+;
+      newage=input(age,3.0);
+		  if age = "90+" then newage=91;
+  		&agegrp.=put(newage, agegrp.);
+	run;
+  *warning messages okay, still results in correct age variable and age group;
+
+	*aggregate up to sex and age group;
+  
+	proc means data =  refpop&canpopyr.;
+	  class sex &agegrp.;
+	  var pop;
+	  output out=refpop sum(pop)=pop;
+	run;
+
+	*remove unnecessary rows and columns and separate into age alone, sex alone and age and sex combined data;
+  
+	data refpopAge&canpopyr. (keep= &agegrp. pop);
+	   set refpop;
+	   if _TYPE_ = 1 then output refpopAge&canpopyr.;
+	run;
+
+	* Create Age- Adjustment Weights Based on Canada Population, &canpopyr. ;
+
+	title  Age- Adjustment Weights Based on Canada Population, &canpopyr.; 
+  
+	proc freq data= refpopAge&canpopyr. ;
+		tables &agegrp. / missing out= standard_pop_wt (keep=&agegrp. percent);
+		weight pop;
+	run;
+    
+	title;
+
+*/
+
+/* -----------------------------------------------
+Step 2. Generate row proportions for each level of the CCHS variable by age strata using PROC FREQ
+-------------------------------------------------*/
+
+proc freq data=&data. noprint;
+	tables &agegrp. * &var. /out=a outpct ;
+	weight &survey_wt.;
+run;
+
+
+/* -----------------------------------------------
+Step 3. Generate adjusted row proportions for each age strata 
+
+Use Age Adjustment Weights from Standard Population using Direct Standardization Method
+-------------------------------------------------*/
+
+	data out_B;
+		merge a standard_pop_wt (rename= (percent=pop_percent)) ;
+		by &agegrp.;
+		wt_prop = (pct_row/100) * (pop_percent/100);
+	run;
+ 
+    
+/* -----------------------------------------------
+Step 4. Sum adjusted row proportions by each level of the CCHS variable using Proc SQL, in order to get age-standardize proportion estimates.
+-------------------------------------------------*/
+
+proc sql;
+	create table AgeStProp_&var.  as
+	select &var., sum (b.wt_prop) as AgeStProp    *Age adjusted proportion; 
+	from out_B as b
+	group by &var.;
+quit;
+    
+    
+/*-------------------------------------------------
+Step 5. Generate standard errors using PROC SURVEYFREQ, in order to compute for logit confidence intervals for age-standardized proportion estimates
+--------------------------------------------------*/
+
+ * Note the default WALD confidence intervals do not work with small counts, since it does fit the normal approximation. 
+ In these cases, it is preferable to compute LOGIT or WILSON confidence intervals;
+
+proc surveyfreq data=&data. varmethod=brr ;  /* Variance estimation using Balance Repeated Replication Method */
+    tables &var. / wtfreq cv cl(type=logit) ;
+	  weight &survey_wt;
+	  repweights &bsvarprefix.1-&bsvarprefix.&numbs.;  
+	  ods  output oneway = f;
+run;
+  
+  *ods listing;
+
+
+* Reorganize and modify variables in dataset f;
+
+data f;
+	retain varname varlevel;
+	set f;
+	varlevel = &var.;
+	if varlevel ^= "";
+	varname = strip(tranwrd(table,"Table ",""));
+  
+	keep Frequency WgtFreq varname varlevel percent cv stderr LowerCL UpperCL;
+	label Frequency = "Unweighted Frequency";
+  
+  rename varlevel= &var.  lowercl=CrudeProp_LCL   percent = CrudeProp UpperCL=CrudeProp_UCL;
+  
+run;
+
+	
+
+/* -----------------------------------------------
+Step 6. Calculate logit confidence intervals for age-standardized proportions. Then merge Age-standardize proportions estimates into a table with the logit confidence intervals for the age-standardized proportions.
+-------------------------------------------------*/
+
+data &out. ;
+    retain frequency wgtFreq varname &var. CrudeProp CrudeProp_LCL CrudeProp_UCL CV StdErr	AgeStProp AgeStProp_LCL AgeStProp_UCL;
+	  merge AgeStProp_&var. f ;
+	  by  &var.;
+   
+	* Compute approximate Logit Confidence Intervals;
+  
+  stderr          = stderr / 100; 
+  X               = ((AgeStProp) / (1 - AgeStProp)) ;    
+  Y               = log(X);
+  Y_LCL           = Y - ( 1.96 * (stderr / X ));  
+  Y_UCL           = Y + ( 1.96 * (stderr / X ));  
+  AgeStProp_LCL   = exp (Y_LCL) / (1 + exp(Y_LCL));
+  AgeStProp_UCL   = exp (Y_UCL) / (1 + exp(Y_UCL));
+          
+        * Note: t distribution with 500 df,  0.05 alpha  =  1.96. 500 degrees of freedom from the 500 CCHS bootstrap weights;
+        
+	* Convert decimals into proportions;
+	 CV            = CV * 100;
+	 StdErr        = StdErr * 100; 
+	 AgeStProp     = AgeStProp * 100;
+	 AgeStProp_LCL = AgeStProp_LCL  * 100;
+	 AgeStProp_UCL = AgeStProp_UCL * 100;
+
+	drop X Y Y_LCL Y_UCL; 
+  
+run;
+
+
+%mend;
