@@ -61,8 +61,8 @@ Note: "Age-specific rates based on small numbers will exhibit a large amount of 
 (2) Christian Gagne, Georgia Roberts, Leslie-Anne Keown. Weighted estimation and bootstrap variance estimation for analyzing
 survey data: How to implement in selected software.
 
-(3) https://support.sas.com/documentation/cdl/en/staug/63347/HTML/default/viewer.htm#surveyfreq_toc.htm
-	(Accessed Oct 1, 2018)	
+(3) https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#surveyfreq_toc.htm
+	(Accessed May 20, 2019)	
 
 For information about combining multiple CCHS survey cycles and how to scale the survey and bootstrap weights:
 
