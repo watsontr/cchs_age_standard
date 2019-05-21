@@ -7,7 +7,8 @@ The references.docx has a list of the resources that I consulted.
 ------------------------------------
 References:
 
-Bains, N. (2009, March). Standardization of Rates. Retrieved May 20, 2019, from http://core.apheo.ca/resources/indicators/Standardization report_NamBains_FINALMarch16.pdf
+Bains, N. (2009, March). Standardization of Rates. Retrieved May 20, 2019, from 
+http://core.apheo.ca/resources/indicators/Standardization%20report_NamBains_FINALMarch16.pdf
 
 Brisebois, F., Mathieu, P., & Bédard, M. (n.d.). Retrieved May 20, 2019, from http://www.ciqss.umontreal.ca/Docs/Formations/Ateliers/2003-11-27_UseofData.pdf
 
