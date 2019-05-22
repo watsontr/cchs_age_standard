@@ -303,25 +303,29 @@ data &out. ;
    
 	* Compute approximate Logit Confidence Intervals;
   
-  stderr          = stderr / 100; 
-  X               = ((AgeStProp) / (1 - AgeStProp)) ;    
-  Y               = log(X);
-  Y_LCL           = Y - ( 1.96 * (stderr / X ));  
-  Y_UCL           = Y + ( 1.96 * (stderr / X ));  
-  AgeStProp_LCL   = exp (Y_LCL) / (1 + exp(Y_LCL));
-  AgeStProp_UCL   = exp (Y_UCL) / (1 + exp(Y_UCL));
-          
-        * Note: t distribution with 500 df,  0.05 alpha  =  1.96. 500 degrees of freedom from the 500 CCHS bootstrap weights;
+	  stderr          = stderr / 100; 
+	  X               = ((AgeStProp) / (1 - AgeStProp)) ; 
+	  W               = ((AgeStProp) * (1 - AgeStProp)) ; 
+	  Y               = log(X);
+
+	  Y_LCL           = Y - ((1.96 * stderr) / W);  
+	  Y_UCL           = Y + ((1.96 * stderr) / W);  
+
+	  AgeStProp_LCL   = exp (Y_LCL) / (1 + exp(Y_LCL));
+	  AgeStProp_UCL   = exp (Y_UCL) / (1 + exp(Y_UCL));
+ 
+       		 * (Note: t distribution with 500 df,  0.05 alpha  =  1.96. 500 degrees of freedom from the 500 CCHS bootstrap weights);
         
 	* Convert decimals into proportions;
-	 CV            = CV * 100;
-	 StdErr        = StdErr * 100; 
-	 AgeStProp     = AgeStProp * 100;
-	 AgeStProp_LCL = AgeStProp_LCL  * 100;
-	 AgeStProp_UCL = AgeStProp_UCL * 100;
+	
+	 CV              = CV * 100;
+	 StdErr          = StdErr * 100; 
+	 AgeStProp       = AgeStProp * 100;
+	 AgeStProp_LCL   = AgeStProp_LCL * 100;
+	 AgeStProp_UCL   = AgeStProp_UCL * 100;
 
-	drop X Y Y_LCL Y_UCL; 
-  
+         
+	 drop X W Y Y_LCL Y_UCL;    
 run;
 
 
