@@ -96,21 +96,8 @@ out
      - Output dataset name 
 
 
-*********************** EXAMPLES ***********************************
-   
 
-%cchs_age_standard(
-data=work.M_tbd_greenstone, 
-var=cchs_smoking_grp_2, 
-canpopyr=2011, 
-survey_wt=normal_wt, 
-agegrp=cchs_age_grp, 
-bsvarprefix =normal_bsw, 
-numbs= 500,
-out=out3 );
-
-
-/*** Read before running the macro ***:
+/*** READ before running the macro ***:
 
 You will need to do Step 1 and 2 before running the macro:
 
@@ -138,7 +125,12 @@ You will need to do Step 1 and 2 before running the macro:
 
 ***/
 
+
+
 ******************************************************************/ ;
+
+
+
 
 %macro cchs_age_standard (
                         data = ,
@@ -155,10 +147,10 @@ You will need to do Step 1 and 2 before running the macro:
 Step 3. For each age group category, calculate the survey weighted proportions for each level of the CCHS variable using PROC FREQ
 -------------------------------------------------*/
 
-proc freq data=&data. noprint;
-	tables &agegrp. * &var. /out=a outpct ;
-	weight &survey_wt.;  * The survey weight variable;
-run;
+	proc freq data=&data. noprint;
+		tables &agegrp. * &var. /out=a outpct ;
+		weight &survey_wt.;  * The survey weight variable;
+	run;
 
 
 /* -----------------------------------------------
@@ -176,46 +168,46 @@ Step 4. For each age group category, the survey weighted crude proportions are m
 Step 5. In order to get direct-standardized proportions, sum the expected proportions by each level of the CCHS variable using Proc SQL.
 -------------------------------------------------*/
 
-proc sql;
-	create table AgeStProp_&var.  as
-	select &var., sum (b.wt_prop) as AgeStProp    
-	from out_B as b
-	group by &var.;
-quit;
+	proc sql;
+		create table AgeStProp_&var.  as
+		select &var., sum (b.wt_prop) as AgeStProp    
+		from out_B as b
+		group by &var.;
+	quit;
     
     
 /*-------------------------------------------------
 Step 6. Generate standard errors using PROC SURVEYFREQ, in order to compute for logit confidence intervals for age-standardized proportion estimates
 --------------------------------------------------*/
 
- * Note the default WALD confidence intervals do not work with small counts, since it does fit the normal approximation. 
- In these cases, it is preferable to compute LOGIT or WILSON confidence intervals;
+	 * Note the default WALD confidence intervals do not work with small counts, since it does fit the normal approximation. 
+	 In these cases, it is preferable to compute LOGIT or WILSON confidence intervals;
 
-proc surveyfreq data=&data. varmethod=brr ;  /* Variance estimation using Balance Repeated Replication Method */
-    tables &var. / wtfreq cv cl(type=logit) ;
-	  weight &survey_wt;
-	  repweights &bsvarprefix.1-&bsvarprefix.&numbs.;  
-	  ods  output oneway = std_err;
-run;
-  
-  *ods listing;
+	proc surveyfreq data=&data. varmethod=brr ;  /* Variance estimation using Balance Repeated Replication Method */
+	    tables &var. / wtfreq cv cl(type=logit) ;
+		  weight &survey_wt;
+		  repweights &bsvarprefix.1-&bsvarprefix.&numbs.;  
+		  ods  output oneway = std_err;
+	run;
+
+	  *ods listing;
 
 
-* Reorganize and modify variables in std_err dataset;
+	* Reorganize and modify variables in std_err dataset;
 
-data std_err;
-	retain varname varlevel;
-	set std_err;
-	varlevel = &var.;
-	if varlevel ^= "";
-	varname = strip(tranwrd(table,"Table ",""));
-  
-	keep Frequency WgtFreq varname varlevel percent cv stderr LowerCL UpperCL;
-	label Frequency = "Unweighted Frequency";
-  
-  rename varlevel= &var.  lowercl=CrudeProp_LCL   percent = CrudeProp UpperCL=CrudeProp_UCL;
-  
-run;
+	data std_err;
+		retain varname varlevel;
+		set std_err;
+		varlevel = &var.;
+		if varlevel ^= "";
+		varname = strip(tranwrd(table,"Table ",""));
+
+		keep Frequency WgtFreq varname varlevel percent cv stderr LowerCL UpperCL;
+		label Frequency = "Unweighted Frequency";
+
+	  rename varlevel= &var.  lowercl=CrudeProp_LCL   percent = CrudeProp UpperCL=CrudeProp_UCL;
+
+	run;
 
 	
 
@@ -224,37 +216,37 @@ Step 7 and 8. Calculate logit confidence intervals for the direct age-standardiz
 	Then merge the age-standardize proportions estimates into a table with the logit confidence intervals for the age-standardized proportions.
 -------------------------------------------------*/
 
-data &out. ;
-    retain frequency wgtFreq varname &var. CrudeProp CrudeProp_LCL CrudeProp_UCL CV StdErr	AgeStProp AgeStProp_LCL AgeStProp_UCL;
-	  merge AgeStProp_&var. std_err;
-	  by  &var.;
-   
-	* Compute approximate Logit Confidence Intervals;
-  
-	  stderr          = stderr / 100; 
-	  X               = ((AgeStProp) / (1 - AgeStProp)) ; 
-	  W               = ((AgeStProp) * (1 - AgeStProp)) ; 
-	  Y               = log(X);
+	data &out. ;
+	    retain frequency wgtFreq varname &var. CrudeProp CrudeProp_LCL CrudeProp_UCL CV StdErr	AgeStProp AgeStProp_LCL AgeStProp_UCL;
+		  merge AgeStProp_&var. std_err;
+		  by  &var.;
 
-	  Y_LCL           = Y - ((1.96 * stderr) / W);  
-	  Y_UCL           = Y + ((1.96 * stderr) / W); 
-	  
-	   	* (Note: t distribution with 500 df,  0.05 alpha  =  1.96. 500 degrees of freedom from the 500 CCHS bootstrap weights);
+		* Compute approximate Logit Confidence Intervals;
 
-	  AgeStProp_LCL   = exp (Y_LCL) / (1 + exp(Y_LCL));
-	  AgeStProp_UCL   = exp (Y_UCL) / (1 + exp(Y_UCL));
- 
-       	
-	* Multiply proportions by 100;
-	
-	 CV              = CV * 100;
-	 StdErr          = StdErr * 100; 
-	 AgeStProp       = AgeStProp * 100;
-	 AgeStProp_LCL   = AgeStProp_LCL * 100;
-	 AgeStProp_UCL   = AgeStProp_UCL * 100;
+		  stderr          = stderr / 100; 
+		  X               = ((AgeStProp) / (1 - AgeStProp)) ; 
+		  W               = ((AgeStProp) * (1 - AgeStProp)) ; 
+		  Y               = log(X);
 
-	 drop X W Y Y_LCL Y_UCL;    
-run;
+		  Y_LCL           = Y - ((1.96 * stderr) / W);  
+		  Y_UCL           = Y + ((1.96 * stderr) / W); 
+
+			* (Note: t distribution with 500 df,  0.05 alpha  =  1.96. 500 degrees of freedom from the 500 CCHS bootstrap weights);
+
+		  AgeStProp_LCL   = exp (Y_LCL) / (1 + exp(Y_LCL));
+		  AgeStProp_UCL   = exp (Y_UCL) / (1 + exp(Y_UCL));
 
 
-%mend;
+		* Multiply proportions by 100;
+
+		 CV              = CV * 100;
+		 StdErr          = StdErr * 100; 
+		 AgeStProp       = AgeStProp * 100;
+		 AgeStProp_LCL   = AgeStProp_LCL * 100;
+		 AgeStProp_UCL   = AgeStProp_UCL * 100;
+
+		 drop X W Y Y_LCL Y_UCL;    
+	run;
+
+
+%mend cchs_age_standard;
