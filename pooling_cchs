@@ -13,41 +13,41 @@
 /* Example for transforming and harmonizing the sex and survey weight variable */ 
 	
 data cchs_11; 
-set cchs11;
-length cchs_sex $ 6; 
-wtsa_on = cchs_weight; * Survey weight variable;
-select (dhha_sex);   * Sex variable;
-when (1) cchs_sex = ‘Male’; 
-when (2) cchs_sex = ‘Female’; 
-otherwise; 
-end; 
+	set cchs11;
+	length cchs_sex $ 6; 
+	wtsa_on = cchs_weight; * Survey weight variable;
+	select (dhha_sex);   * Sex variable;
+		when (1) cchs_sex = ‘Male’; 
+		when (2) cchs_sex = ‘Female’; 
+		otherwise; 
+	end; 
 run;
 
 data cchs_21; 
-set cchs21; length cchs_sex $ 6; 
-			wtsc_l = cchs_weight; * Survey weight variable;
-select (dhhc_sex); * Sex variable;
-when (1) cchs_sex = ‘Male’; 
-when (2) cchs_sex = ‘Female’; 
-otherwise; 
-end; 
+	set cchs21; length cchs_sex $ 6; 
+	wtsc_l = cchs_weight; * Survey weight variable;
+	select (dhhc_sex); * Sex variable;
+		when (1) cchs_sex = ‘Male’; 
+		when (2) cchs_sex = ‘Female’; 
+		otherwise; 
+	end; 
 run;
 
 	/* Step 3 - Combine the CCHS cycles including the bootstrap weights */
 
 data cchs_11_21;
-set  cchs_11
-                   cchs_21;
+	set  cchs_11
+             cchs_21;
 run;
 
 	/* Step 4 - Divide the CCHS survey and bootstrap weights by the number of cycles combined */
 
 data cchs_11_21;
-set  cchs_11_21;
-cchs_weight = cchs_weight / 2;  * Divide by the number  of cycles combined;
-			array bt_weight bsw1 – bsw500;
-			do i = 1 to dim (bt_weight);
-				bt_weight {i} = bt_weight {i} / 2;
-			end;
+	set  cchs_11_21;
+	cchs_weight = cchs_weight / 2;  * Divide survey weight by the number  of cycles combined;
+	array bt_weight bsw1 – bsw500;
+		do i = 1 to dim (bt_weight);
+			bt_weight {i} = bt_weight {i} / 2;  * Divide bootstrap weights by the number  of cycles combined;
+		end;
 run;
 
