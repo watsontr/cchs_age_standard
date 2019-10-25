@@ -46,6 +46,8 @@ You will need to categorize your "agegrp" variable in the same way as the agegrp
 
 Note: "Age-specific rates based on small numbers will exhibit a large amount of random variation and the data should be aggregated. Hence, different age groupings and corresponding calculations of age-adjustment weights may be needed for different applications."  [Ref 1]
 
+Our approach uses the variance of the survey-weighted proportion as an estimate of the variance of the age-standardized proportion. Another option for the variance calculation could be to directly bootstrap the age-standardized proportion. The variance of the survey-weighted crude proportion estimate is used as proxy for the variance of the age-standardized proportion; this has an unknown impact on the quality of the confidence interval estimate.
+
 ***************************************************************************;
 
 * ADDITIONAL REFERENCES:
@@ -181,7 +183,14 @@ Step 6. Generate standard errors using PROC SURVEYFREQ, in order to compute for 
 --------------------------------------------------*/
 
 	 * Note the default WALD confidence intervals do not work with small counts, since it does fit the normal approximation. 
-	 In these cases, it is preferable to compute LOGIT or WILSON confidence intervals;
+	 In these cases, it is preferable to compute LOGIT or WILSON confidence intervals
+	 
+	 Our approach uses the variance of the survey-weighted proportion as an estimate of the variance of the age-standardized proportion. 
+	 Another option for the variance calculation could be to directly bootstrap the age-standardized proportion. 
+	 
+	 The variance of the survey-weighted crude proportion estimate is used as proxy for the variance of the age-standardized proportion; this has an unknown impact on the quality of the confidence interval estimate.
+	 
+	 ;
 
 	proc surveyfreq data=&data. varmethod=brr ;  /* Variance estimation using Balance Repeated Replication Method */
 	    tables &var. / wtfreq cv cl(type=logit) ;
