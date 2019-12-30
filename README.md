@@ -1,6 +1,14 @@
 # cchs_age_standard
 A method for direct age standardizing  proportion estimates from combined cycles of the Canadian Community Health Survey (CCHS) using SAS.
 
+Link to paper: 
+
+Watson T., Kornas K., Rosella L.  (2019).    Age-Standarizing Proportion Estimates From Combined Cycles Of The Canadian Community Health Survey    https://ssc.ca/sites/default/files/imce/survey_methods_2_-_age-standardizing_proportion_estimates_from_combined_cycles_of_the_canadian_community_health_survey_watson_kornas_rosella-ssc2019_0.pdf
+
+Presented at the Statistical Soceity of Canada 2019 Annual Meeting in Calgary.
+
+
+
 
 
 ------------------------------------
